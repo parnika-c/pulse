@@ -58,7 +58,7 @@ export function MonthCalendar({
   };
 
   return (
-    <div className="max-w-sm mx-auto rounded-2xl p-4 sm:p-5 text-zinc-900">
+    <div className="w-full max-w-sm mx-auto rounded-2xl p-3 sm:p-5 text-zinc-900 box-border">
       <div className="flex items-center justify-between mb-4">
         <button
           type="button"

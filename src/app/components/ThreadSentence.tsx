@@ -43,7 +43,7 @@ export function ThreadSentence({
 
   return (
     <motion.div
-      className="relative py-8 cursor-pointer select-none"
+      className="relative py-6 sm:py-8 cursor-pointer select-none"
       onMouseDown={onPressStart}
       onMouseUp={onPressEnd}
       onMouseLeave={onPressEnd}
@@ -67,27 +67,27 @@ export function ThreadSentence({
         transition={{ duration: 0.3, ease: "easeOut" }}
       />
 
-      <div className="relative z-10 flex flex-col gap-2">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-lg">{getAvatarForUser(card.userName)}</span>
-            <span className="text-sm text-zinc-400">{card.userName}</span>
+      <div className="relative z-10 flex flex-col gap-2 min-w-0">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-lg shrink-0">{getAvatarForUser(card.userName)}</span>
+            <span className="text-sm text-zinc-400 truncate">{card.userName}</span>
           </div>
 
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-zinc-500 shrink-0">
             {card.timestamp.toLocaleTimeString("en-US", {
               hour: "numeric",
               minute: "2-digit",
             })}
           </p>
 
-          <span className={`text-xs uppercase tracking-wider ${textColor} opacity-80`}>
+          <span className={`text-xs uppercase tracking-wider shrink-0 ${textColor} opacity-80`}>
             {card.mood}
           </span>
         </div>
 
         <motion.p
-          className="text-base leading-relaxed text-white"
+          className="text-[15px] sm:text-base leading-relaxed text-white break-words"
           animate={{
             letterSpacing: isPressed ? "0.02em" : "0em",
           }}

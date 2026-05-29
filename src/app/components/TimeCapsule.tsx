@@ -87,7 +87,7 @@ export function TimeCapsule({ archivedDays, todayThreadCards }: TimeCapsuleProps
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
+    <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8 box-border">
       <MonthCalendar
         year={viewYear}
         month={viewMonth}

@@ -60,13 +60,20 @@ export function getConnectionBulge(
   return 14 + span * 8 + Math.max(0, curveIndex) * 12;
 }
 
-export function getCurveMidpoint(
-  x: number,
+/** Point at t=0.5 on the cubic curve used for spark paths. */
+export function getPathNodePosition(
+  anchorX: number,
   y1: number,
   y2: number,
   bulge: number
 ): { x: number; y: number } {
-  const cx = x - bulge;
   const midY = (y1 + y2) / 2;
-  return { x: (x + cx) / 2, y: midY };
+  if (bulge <= 0) {
+    return { x: anchorX, y: midY };
+  }
+  return { x: anchorX - bulge * 0.75, y: midY };
+}
+
+export function getAdjacentBulge(): number {
+  return 12;
 }

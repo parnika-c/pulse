@@ -1,20 +1,21 @@
-import { useCallback, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { DailyCard } from "../App";
 import { ConnectionNode } from "./ConnectionNode";
 import {
   findConnections,
+  getAdjacentBulge,
   getConnectionBulge,
-  getCurveMidpoint,
   getMoodLineColor,
+  getPathNodePosition,
   isAdjacentConnection,
   type ThreadConnection,
 } from "../utils/threadConnections";
-import React from "react";
 
-const RAIL_WIDTH = 20;
-/** Anchor on the rail edge closest to the sentences */
-const RAIL_X = RAIL_WIDTH - 6;
+const RAIL_ANCHOR_INSET = 6;
+const RAIL_MIN_WIDTH = 44;
+/** Space for button (18px radius) centered on the leftmost part of a curve */
+const RAIL_NODE_PADDING = 20;
 
 interface CardAnchor {
   index: number;
@@ -26,6 +27,15 @@ interface ThreadListProps {
   renderCard: (index: number) => ReactNode;
   selectedConnectionId: string | null;
   onSelectConnection: (connection: ThreadConnection | null) => void;
+}
+
+function bulgeForConnection(
+  connection: ThreadConnection,
+  allConnections: ThreadConnection[]
+): number {
+  return isAdjacentConnection(connection)
+    ? getAdjacentBulge()
+    : getConnectionBulge(connection, allConnections);
 }
 
 export function ThreadList({
@@ -40,6 +50,20 @@ export function ThreadList({
   const [railHeight, setRailHeight] = useState(0);
 
   const connections = findConnections(cards);
+
+  const { railWidth, anchorX } = useMemo(() => {
+    if (connections.length === 0) {
+      return { railWidth: RAIL_MIN_WIDTH, anchorX: RAIL_MIN_WIDTH - RAIL_ANCHOR_INSET };
+    }
+    const maxBulge = Math.max(
+      ...connections.map((c) => bulgeForConnection(c, connections))
+    );
+    const width = Math.max(
+      RAIL_MIN_WIDTH,
+      Math.ceil(maxBulge * 0.75 + RAIL_NODE_PADDING + RAIL_ANCHOR_INSET)
+    );
+    return { railWidth: width, anchorX: width - RAIL_ANCHOR_INSET };
+  }, [connections]);
 
   const measure = useCallback(() => {
     const container = containerRef.current;
@@ -79,16 +103,15 @@ export function ThreadList({
   const anchorByIndex = Object.fromEntries(anchors.map((a) => [a.index, a]));
 
   return (
-    <div ref={containerRef} className="relative flex gap-2 sm:gap-3 overflow-visible">
-      {anchors.length > 1 && railHeight > 0 && (
+    <div ref={containerRef} className="relative flex gap-2 sm:gap-3 overflow-visible w-full min-w-0">
+      {anchors.length > 1 && railHeight > 0 && connections.length > 0 && (
         <div
           className="relative shrink-0 overflow-visible"
-          style={{ width: RAIL_WIDTH, height: railHeight }}
+          style={{ width: railWidth, minWidth: railWidth, height: railHeight }}
         >
-          {/* 1. THE SVG LAYER (Lines only) */}
           <svg
             className="absolute inset-0 overflow-visible pointer-events-none"
-            width={RAIL_WIDTH}
+            width={railWidth}
             height={railHeight}
           >
             {connections.map((connection) => {
@@ -96,10 +119,9 @@ export function ThreadList({
               const a2 = anchorByIndex[connection.index2];
               if (!a1 || !a2) return null;
 
-              const isAdj = isAdjacentConnection(connection);
-              const bulge = isAdj ? 18 : getConnectionBulge(connection, connections);
+              const bulge = bulgeForConnection(connection, connections);
               const accent = getMoodLineColor(connection.card1.mood);
-              const path = `M ${RAIL_X} ${a1.centerY} C ${RAIL_X - bulge} ${a1.centerY}, ${RAIL_X - bulge} ${a2.centerY}, ${RAIL_X} ${a2.centerY}`;
+              const path = `M ${anchorX} ${a1.centerY} C ${anchorX - bulge} ${a1.centerY}, ${anchorX - bulge} ${a2.centerY}, ${anchorX} ${a2.centerY}`;
 
               return (
                 <PulsingCurvePath
@@ -114,23 +136,26 @@ export function ThreadList({
             })}
           </svg>
 
-          {/* 2. THE HTML LAYER (Nodes only) */}
           {connections.map((connection) => {
             const a1 = anchorByIndex[connection.index1];
             const a2 = anchorByIndex[connection.index2];
             if (!a1 || !a2) return null;
 
-            const isAdj = isAdjacentConnection(connection);
-            const bulge = isAdj ? 18 : getConnectionBulge(connection, connections);
-            const { x, y } = getCurveMidpoint(RAIL_X, a1.centerY, a2.centerY, bulge);
+            const bulge = bulgeForConnection(connection, connections);
+            const { x, y } = getPathNodePosition(
+              anchorX,
+              a1.centerY,
+              a2.centerY,
+              bulge
+            );
 
             return (
               <div
                 key={`node-${connection.id}`}
                 className="absolute z-10 pointer-events-auto"
                 style={{
-                  left: x - 5,
-                  top: y - 3,
+                  left: x,
+                  top: y,
                   transform: "translate(-50%, -50%)",
                 }}
               >
@@ -187,7 +212,6 @@ function PulsingCurvePath({
   return (
     <g>
       <defs>
-        {/* 1. Tapering Mask (Smooth fade at ends) */}
         <linearGradient id={`taper-${id}`} x1="0" y1={y1} x2="0" y2={y2} gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="black" stopOpacity="0" />
           <stop offset="20%" stopColor="white" stopOpacity="1" />
@@ -198,7 +222,6 @@ function PulsingCurvePath({
           <rect x="-200" y={minY - 100} width="400" height={height + 200} fill={`url(#taper-${id})`} />
         </mask>
 
-        {/* 2. Traveling Smooth Gradient (The Spark) */}
         <linearGradient id={`spark-grad-${id}`} x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor={accent} stopOpacity="0" />
           <stop offset="50%" stopColor={accent} stopOpacity="1" />
@@ -206,10 +229,8 @@ function PulsingCurvePath({
         </linearGradient>
       </defs>
 
-      {/* Base faint line */}
       <path d={path} fill="none" stroke={accent} strokeWidth={1} strokeOpacity={0.1} mask={`url(#mask-${id})`} />
 
-      {/* The Animated "Smooth" Spark */}
       <motion.path
         d={path}
         fill="none"
@@ -227,7 +248,6 @@ function PulsingCurvePath({
         style={{ filter: "blur(2px)" }}
       />
 
-      {/* Ambient Opacity Pulse */}
       <motion.path
         d={path}
         fill="none"

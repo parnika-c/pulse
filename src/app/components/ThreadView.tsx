@@ -19,7 +19,7 @@ export function ThreadView({ cards, hasPostedToday, onPulseClick }: ThreadViewPr
   const pressedCard = cards.find((c) => c.id === pressedCardId);
 
   return (
-    <div className="relative max-w-2xl mx-auto px-4 sm:px-6 py-12 min-h-screen">
+    <div className="relative w-full max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12 min-h-screen box-border">
       {!hasPostedToday ? (
         <>
           <button
