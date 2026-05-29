@@ -3,6 +3,7 @@ import { ThreadView } from "./components/ThreadView";
 import { PulseModal } from "./components/PulseModal";
 import { TimeCapsule } from "./components/TimeCapsule";
 import { Sparkles, Archive } from "lucide-react";
+import { getMoodLineColor } from "./utils/threadConnections";
 
 export interface DailyCard {
   id: string;
@@ -32,7 +33,7 @@ const MOCK_FRIEND_CARDS: DailyCard[] = [
     id: "2",
     userId: "2",
     userName: "Alex",
-    mood: "Exhausted",
+    mood: "Reflective",
     sentence: "Melting after that 4-hour sprint meeting that went nowhere.",
     rawInput: "ugh 4 hours straight in that sprint meeting and we basically ended up where we started, my brain is completely fried, just want to go home and collapse",
     timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
@@ -41,7 +42,7 @@ const MOCK_FRIEND_CARDS: DailyCard[] = [
     id: "3",
     userId: "3",
     userName: "Jordan",
-    mood: "Accomplished",
+    mood: "Anxious",
     sentence: "Finally finished the book layout after weeks of procrastinating!",
     rawInput: "what a day!! got the feature out the door this morning, stakeholder demo went amazing, they loved it, and i even managed to squeeze in my yoga class at 6pm which felt impossible this morning",
     timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
@@ -50,7 +51,7 @@ const MOCK_FRIEND_CARDS: DailyCard[] = [
     id: "4",
     userId: "4",
     userName: "Sam",
-    mood: "Exhausted",
+    mood: "Reflective",
     sentence: "Survived another 12-hour workday but questioning everything.",
     rawInput: "12 hours straight today and i'm just exhausted... i keep saying yes to everything and i think it's catching up to me. need to set better boundaries but don't know how to start",
     timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000),
@@ -266,6 +267,86 @@ function getDateKey(date = new Date()): string {
   return date.toDateString();
 }
 
+function WaitingRoom({
+  friends,
+  postedCards,
+}: {
+  friends: User[];
+  postedCards: DailyCard[];
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[70vh] px-6 text-center">
+      <p className="text-zinc-500 text-sm uppercase tracking-[0.2em] mb-3">
+        Today's Room
+      </p>
+
+      <h2 className="text-2xl mb-3">
+        Your friends are checking in
+      </h2>
+
+      <p className="text-zinc-500 max-w-sm mb-12">
+        Share your pulse to unlock today's thread.
+      </p>
+
+      <div className="flex gap-5 mb-8">
+        {friends.map((friend) => {
+          const card = postedCards.find(
+            (c) => c.userId === friend.id
+          );
+
+          const posted = Boolean(card);
+
+          return (
+            <div
+              key={friend.id}
+              className="relative flex items-center justify-center"
+            >
+              {posted && card && (
+                <div
+                  className="absolute w-14 h-14 rounded-full blur-xl animate-[pulse_4s_ease-in-out_infinite]"
+                  style={{
+                    backgroundColor: getMoodLineColor(card.mood) || "#ffffff",
+                  }}
+                />
+              )}
+
+              <div
+                className={`
+                  relative z-10 text-4xl transition-all duration-500
+                  ${posted ? "" : "grayscale opacity-30"}
+                `}
+              >
+                {friend.avatar}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="text-zinc-400">
+        <span className="text-white font-medium">
+          {postedCards.length}
+        </span>
+        {" of "}
+        <span className="text-white font-medium">
+          {friends.length}
+        </span>
+        {" friends checked in"}
+      </div>
+
+      <button
+        className="mt-10 px-5 py-3 rounded-xl bg-white text-black hover:bg-zinc-200 transition-colors"
+        onClick={() => {
+          const event = new CustomEvent("openPulse");
+          window.dispatchEvent(event);
+        }}
+      >
+        Share Today's Pulse
+      </button>
+    </div>
+  );
+}
+
 export default function App() {
   const [view, setView] = useState<"thread" | "capsule">("thread");
   const [userCard, setUserCard] = useState<DailyCard | null>(() => loadUserCard());
@@ -305,6 +386,16 @@ export default function App() {
     }
   }, [userCard]);
 
+  useEffect(() => {
+    const handler = () => setIsPulseModalOpen(true);
+
+    window.addEventListener("openPulse", handler);
+
+    return () => {
+      window.removeEventListener("openPulse", handler);
+    };
+  }, []);
+
   const handlePulseSubmit = (card: DailyCard) => {
     setUserCard(card);
     setIsPulseModalOpen(false);
@@ -318,12 +409,12 @@ export default function App() {
     : userCard ? [userCard] : [];
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white flex flex-col">
-      <header className="px-6 py-4 border-b border-zinc-800/50 backdrop-blur-sm sticky top-0 z-40 bg-zinc-950/80">
-        <div className="flex items-center justify-between max-w-2xl mx-auto">
-          <div>
-            <h1 className="text-xl tracking-tight">Pulse</h1>
-            <p className="text-sm text-zinc-500">
+    <div className="min-h-screen bg-zinc-950 text-white flex flex-col overflow-x-hidden">
+      <header className="px-4 sm:px-6 py-3 sm:py-4 border-b border-zinc-800/50 backdrop-blur-sm sticky top-0 z-40 bg-zinc-950/80">
+        <div className="flex items-center justify-between max-w-2xl mx-auto w-full">
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-xl tracking-tight">Pulse</h1>
+            <p className="text-xs sm:text-sm text-zinc-500 truncate">
               {new Date().toLocaleDateString("en-US", {
                 weekday: "long",
                 month: "short",
@@ -358,14 +449,21 @@ export default function App() {
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden w-full">
         {view === "thread" ? (
-          <ThreadView
-            cards={visibleCards}
-            hasPostedToday={hasPostedToday}
-            onPulseClick={() => setIsPulseModalOpen(true)}
-            currentUser={currentUser}
-          />
+          hasPostedToday ? (
+            <ThreadView
+              cards={visibleCards}
+              hasPostedToday={hasPostedToday}
+              onPulseClick={() => setIsPulseModalOpen(true)}
+              currentUser={currentUser}
+            />
+          ) : (
+            <WaitingRoom
+              friends={MOCK_USERS.slice(1)}
+              postedCards={MOCK_FRIEND_CARDS}
+            />
+          )
         ) : (
           <TimeCapsule
             archivedDays={archivedDays}
