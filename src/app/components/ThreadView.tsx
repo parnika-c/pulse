@@ -2,6 +2,7 @@ import { useState } from "react";
 import { DailyCard, User } from "../App";
 import { ThreadSentence } from "./ThreadSentence";
 import { ConnectionNode } from "./ConnectionNode";
+import { ThreadConnector } from "./ThreadConnector";
 import { Plus } from "lucide-react";
 
 interface ThreadViewProps {
@@ -63,94 +64,40 @@ export function ThreadView({ cards, hasPostedToday, onPulseClick, currentUser }:
 
       {hasPostedToday && cards.length > 0 && (
         <div className="relative">
-          <svg
-            className="absolute left-1/2 top-0 -translate-x-1/2 pointer-events-none"
-            width="4"
-            height="100%"
-            style={{ minHeight: `${cards.length * 180}px` }}
-          >
-            <defs>
-              <filter id="glow">
-                <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-                <feMerge>
-                  <feMergeNode in="coloredBlur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
+          {cards.map((card, index) => {
+            const sparkConnection = connections.find((c) => c.index1 === index);
+            const shouldHighlight =
+              pressedCard && pressedCard.mood === card.mood && pressedCard.id !== card.id;
 
-            {cards.map((_, i) => {
-              if (i === cards.length - 1) return null;
-
-              const y1 = i * 180 + 90;
-              const y2 = (i + 1) * 180 + 90;
-              const connection = connections.find(
-                (c) => c.index1 === i && c.index2 === i + 1
-              );
-
-              if (connection) {
-                const midY = (y1 + y2) / 2;
-                const loopWidth = 60;
-                return (
-                  <path
-                    key={`thread-${i}`}
-                    d={`M 2 ${y1} Q ${loopWidth} ${midY} 2 ${y2}`}
-                    stroke="rgba(255, 255, 255, 0.3)"
-                    strokeWidth="2"
-                    fill="none"
-                    filter="url(#glow)"
-                  />
-                );
-              }
-
-              return (
-                <line
-                  key={`thread-${i}`}
-                  x1="2"
-                  y1={y1}
-                  x2="2"
-                  y2={y2}
-                  stroke="rgba(255, 255, 255, 0.3)"
-                  strokeWidth="2"
-                  filter="url(#glow)"
+            return (
+              <div key={card.id} className="relative">
+                <ThreadSentence
+                  card={card}
+                  onPressStart={() => setPressedCardId(card.id)}
+                  onPressEnd={() => setPressedCardId(null)}
+                  isPressed={pressedCardId === card.id}
+                  shouldHighlight={shouldHighlight}
                 />
-              );
-            })}
-          </svg>
 
-          <div className="space-y-4">
-            {cards.map((card, index) => {
-              const connection = connections.find(
-                (c) => c.index1 === index || c.index2 === index
-              );
-              const shouldHighlight =
-                pressedCard && pressedCard.mood === card.mood && pressedCard.id !== card.id;
-
-              return (
-                <div key={card.id} className="relative">
-                  <ThreadSentence
-                    card={card}
-                    onPressStart={() => setPressedCardId(card.id)}
-                    onPressEnd={() => setPressedCardId(null)}
-                    isPressed={pressedCardId === card.id}
-                    shouldHighlight={shouldHighlight}
-                  />
-
-                  {connection && connection.index1 === index && (
+                {index < cards.length - 1 &&
+                  (sparkConnection ? (
                     <ConnectionNode
-                      connection={connection}
-                      isSelected={selectedConnection?.id === connection.id}
+                      connection={sparkConnection}
+                      isSelected={selectedConnection?.id === sparkConnection.id}
                       onToggle={() =>
                         setSelectedConnection(
-                          selectedConnection?.id === connection.id ? null : connection
+                          selectedConnection?.id === sparkConnection.id
+                            ? null
+                            : sparkConnection
                         )
                       }
                     />
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                  ) : (
+                    <ThreadConnector />
+                  ))}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -181,18 +128,4 @@ function findConnections(cards: DailyCard[]): Connection[] {
   }
 
   return connections;
-}
-
-function getMoodColor(mood: string): string {
-  const colors: Record<string, string> = {
-    Exhausted: "#a855f7",
-    Creative: "#ec4899",
-    Accomplished: "#10b981",
-    Reflective: "#3b82f6",
-    Energized: "#eab308",
-    Overwhelmed: "#f97316",
-    Peaceful: "#14b8a6",
-    Anxious: "#ef4444",
-  };
-  return colors[mood] || "#a855f7";
 }

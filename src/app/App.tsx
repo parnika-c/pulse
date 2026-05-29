@@ -57,25 +57,156 @@ const MOCK_FRIEND_CARDS: DailyCard[] = [
   },
 ];
 
+const ARCHIVE_STORAGE_KEY = "pulse-archived-days";
+const USER_CARD_STORAGE_KEY = "pulse-user-card";
+const LAST_ACTIVE_DATE_KEY = "pulse-last-active-date";
+
+function daysAgo(n: number): Date {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d;
+}
+
+const MOCK_ARCHIVED_DAYS: DailyCard[][] = [
+  [
+    {
+      id: "arch-1",
+      userId: "1",
+      userName: "You",
+      mood: "Reflective",
+      sentence: "Quiet Sunday thinking about where the year is headed.",
+      rawInput: "slow sunday, lots of thinking about goals for the rest of the year",
+      timestamp: daysAgo(1),
+    },
+    {
+      id: "arch-2",
+      userId: "2",
+      userName: "Alex",
+      mood: "Creative",
+      sentence: "Sketched out a new layout idea that finally clicked.",
+      rawInput: "spent the afternoon sketching and something finally clicked with the new layout",
+      timestamp: daysAgo(1),
+    },
+    {
+      id: "arch-3",
+      userId: "4",
+      userName: "Sam",
+      mood: "Peaceful",
+      sentence: "Long walk without my phone felt like a reset.",
+      rawInput: "went for a long walk without my phone and it felt like a full reset",
+      timestamp: daysAgo(1),
+    },
+  ],
+  [
+    {
+      id: "arch-4",
+      userId: "3",
+      userName: "Jordan",
+      mood: "Accomplished",
+      sentence: "Shipped the beta and the team celebrated with coffee.",
+      rawInput: "shipped the beta today!! team grabbed coffee to celebrate, feeling really good",
+      timestamp: daysAgo(2),
+    },
+    {
+      id: "arch-5",
+      userId: "1",
+      userName: "You",
+      mood: "Exhausted",
+      sentence: "Back-to-back deadlines left no room to breathe.",
+      rawInput: "back to back deadlines all day, barely had time to eat lunch",
+      timestamp: daysAgo(2),
+    },
+  ],
+];
+
+function serializeCard(card: DailyCard): string {
+  return JSON.stringify({ ...card, timestamp: card.timestamp.toISOString() });
+}
+
+function deserializeCard(raw: string): DailyCard {
+  const parsed = JSON.parse(raw);
+  return { ...parsed, timestamp: new Date(parsed.timestamp) };
+}
+
+function serializeArchivedDays(days: DailyCard[][]): string {
+  return JSON.stringify(
+    days.map((day) => day.map((card) => ({ ...card, timestamp: card.timestamp.toISOString() })))
+  );
+}
+
+function deserializeArchivedDays(raw: string): DailyCard[][] {
+  const parsed = JSON.parse(raw) as Array<Array<{ timestamp: string } & DailyCard>>;
+  return parsed.map((day) => day.map((card) => ({ ...card, timestamp: new Date(card.timestamp) })));
+}
+
+function loadArchivedDays(): DailyCard[][] {
+  try {
+    const stored = localStorage.getItem(ARCHIVE_STORAGE_KEY);
+    if (stored) {
+      const days = deserializeArchivedDays(stored);
+      if (days.length > 0) {
+        return days;
+      }
+    }
+  } catch {
+    // ignore corrupt storage
+  }
+  return MOCK_ARCHIVED_DAYS;
+}
+
+function loadUserCard(): DailyCard | null {
+  try {
+    const stored = localStorage.getItem(USER_CARD_STORAGE_KEY);
+    if (stored) {
+      return deserializeCard(stored);
+    }
+  } catch {
+    // ignore corrupt storage
+  }
+  return null;
+}
+
+function getDateKey(date = new Date()): string {
+  return date.toDateString();
+}
+
 export default function App() {
   const [view, setView] = useState<"thread" | "capsule">("thread");
-  const [userCard, setUserCard] = useState<DailyCard | null>(null);
+  const [userCard, setUserCard] = useState<DailyCard | null>(() => loadUserCard());
   const [isPulseModalOpen, setIsPulseModalOpen] = useState(false);
-  const [archivedDays, setArchivedDays] = useState<DailyCard[][]>([]);
+  const [archivedDays, setArchivedDays] = useState<DailyCard[][]>(() => loadArchivedDays());
 
   useEffect(() => {
-    const checkMidnight = () => {
-      const now = new Date();
-      if (now.getHours() === 0 && now.getMinutes() === 0) {
-        if (userCard) {
-          setArchivedDays((prev) => [[userCard, ...MOCK_FRIEND_CARDS], ...prev]);
-          setUserCard(null);
-        }
-      }
-    };
+    const today = getDateKey();
+    const lastActive = localStorage.getItem(LAST_ACTIVE_DATE_KEY);
 
-    const interval = setInterval(checkMidnight, 60000);
-    return () => clearInterval(interval);
+    if (lastActive && lastActive !== today) {
+      const storedCard = localStorage.getItem(USER_CARD_STORAGE_KEY);
+      if (storedCard) {
+        const card = deserializeCard(storedCard);
+        setArchivedDays((prev) => {
+          const next = [[card, ...MOCK_FRIEND_CARDS], ...prev];
+          localStorage.setItem(ARCHIVE_STORAGE_KEY, serializeArchivedDays(next));
+          return next;
+        });
+        localStorage.removeItem(USER_CARD_STORAGE_KEY);
+        setUserCard(null);
+      }
+    }
+
+    localStorage.setItem(LAST_ACTIVE_DATE_KEY, today);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(ARCHIVE_STORAGE_KEY, serializeArchivedDays(archivedDays));
+  }, [archivedDays]);
+
+  useEffect(() => {
+    if (userCard) {
+      localStorage.setItem(USER_CARD_STORAGE_KEY, serializeCard(userCard));
+    } else {
+      localStorage.removeItem(USER_CARD_STORAGE_KEY);
+    }
   }, [userCard]);
 
   const handlePulseSubmit = (card: DailyCard) => {

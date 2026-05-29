@@ -144,10 +144,10 @@ export function PulseModal({ isOpen, onClose, onSubmit, currentUser }: PulseModa
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
                   <Sparkles className="w-5 h-5 text-purple-400" />
                 </div>
-                <Dialog.Title className="text-lg">Drop today's brain dump</Dialog.Title>
+                <Dialog.Title className="text-lg text-white">Drop today's brain dump</Dialog.Title>
               </div>
               <Dialog.Close asChild>
-                <button className="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
+                <button className="p-2 hover:bg-zinc-800 rounded-lg transition-colors text-zinc-400 hover:text-white">
                   <X className="w-5 h-5" />
                 </button>
               </Dialog.Close>

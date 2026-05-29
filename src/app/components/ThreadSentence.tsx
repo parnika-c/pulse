@@ -69,17 +69,25 @@ export function ThreadSentence({
 
       <div className="relative z-10 flex flex-col gap-2">
         <div className="flex items-center gap-3">
-          <span className={`text-xs uppercase tracking-wider ${textColor} opacity-60`}>
-            {card.mood}
-          </span>
           <div className="flex items-center gap-2">
             <span className="text-lg">{getAvatarForUser(card.userName)}</span>
-            <span className="text-sm text-zinc-500">{card.userName}</span>
+            <span className="text-sm text-zinc-400">{card.userName}</span>
           </div>
+
+          <p className="text-xs text-zinc-500">
+            {card.timestamp.toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "2-digit",
+            })}
+          </p>
+
+          <span className={`text-xs uppercase tracking-wider ${textColor} opacity-80`}>
+            {card.mood}
+          </span>
         </div>
 
         <motion.p
-          className="text-lg leading-relaxed text-white"
+          className="text-base leading-relaxed text-white"
           animate={{
             letterSpacing: isPressed ? "0.02em" : "0em",
           }}
@@ -87,13 +95,6 @@ export function ThreadSentence({
         >
           {card.sentence}
         </motion.p>
-
-        <p className="text-xs text-zinc-600">
-          {card.timestamp.toLocaleTimeString("en-US", {
-            hour: "numeric",
-            minute: "2-digit",
-          })}
-        </p>
       </div>
     </motion.div>
   );
