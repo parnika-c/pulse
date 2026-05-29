@@ -1,29 +1,21 @@
 import { useState } from "react";
 import { DailyCard } from "../App";
 import { ThreadSentence } from "./ThreadSentence";
-import { ConnectionNode } from "./ConnectionNode";
-import { ThreadConnector } from "./ThreadConnector";
+import { ThreadList } from "./ThreadRail";
 import { Calendar } from "lucide-react";
+import type { ThreadConnection } from "../utils/threadConnections";
 
 interface TimeCapsuleProps {
   archivedDays: DailyCard[][];
   currentCard: DailyCard | null;
 }
 
-interface Connection {
-  id: string;
-  card1: DailyCard;
-  card2: DailyCard;
-  index1: number;
-  index2: number;
-}
-
 export function TimeCapsule({ archivedDays, currentCard }: TimeCapsuleProps) {
-  const [selectedConnection, setSelectedConnection] = useState<Connection | null>(null);
+  const [selectedConnection, setSelectedConnection] = useState<ThreadConnection | null>(null);
   const hasArchive = archivedDays.length > 0;
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-8">
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
       {currentCard && (
         <div className="mb-12">
           <div className="flex items-center gap-2 mb-4">
@@ -41,7 +33,6 @@ export function TimeCapsule({ archivedDays, currentCard }: TimeCapsuleProps) {
           {archivedDays.map((dayCards, dayIndex) => {
             const dayDate = new Date();
             dayDate.setDate(dayDate.getDate() - (dayIndex + 1));
-            const connections = findConnections(dayCards);
 
             return (
               <div key={dayIndex}>
@@ -56,34 +47,12 @@ export function TimeCapsule({ archivedDays, currentCard }: TimeCapsuleProps) {
                   </p>
                 </div>
 
-                <div className="relative">
-                  {dayCards.map((card, index) => {
-                    const sparkConnection = connections.find((c) => c.index1 === index);
-
-                    return (
-                      <div key={card.id} className="relative">
-                        <ThreadSentence card={card} />
-
-                        {index < dayCards.length - 1 &&
-                          (sparkConnection ? (
-                            <ConnectionNode
-                              connection={sparkConnection}
-                              isSelected={selectedConnection?.id === sparkConnection.id}
-                              onToggle={() =>
-                                setSelectedConnection(
-                                  selectedConnection?.id === sparkConnection.id
-                                    ? null
-                                    : sparkConnection
-                                )
-                              }
-                            />
-                          ) : (
-                            <ThreadConnector />
-                          ))}
-                      </div>
-                    );
-                  })}
-                </div>
+                <ThreadList
+                  cards={dayCards}
+                  selectedConnectionId={selectedConnection?.id ?? null}
+                  onSelectConnection={setSelectedConnection}
+                  renderCard={(index) => <ThreadSentence card={dayCards[index]} />}
+                />
               </div>
             );
           })}
@@ -103,24 +72,3 @@ export function TimeCapsule({ archivedDays, currentCard }: TimeCapsuleProps) {
     </div>
   );
 }
-
-function findConnections(cards: DailyCard[]): Connection[] {
-  const connections: Connection[] = [];
-
-  for (let i = 0; i < cards.length - 1; i++) {
-    for (let j = i + 1; j < cards.length; j++) {
-      if (cards[i].mood === cards[j].mood && j === i + 1) {
-        connections.push({
-          id: `${cards[i].id}-${cards[j].id}`,
-          card1: cards[i],
-          card2: cards[j],
-          index1: i,
-          index2: j,
-        });
-      }
-    }
-  }
-
-  return connections;
-}
-

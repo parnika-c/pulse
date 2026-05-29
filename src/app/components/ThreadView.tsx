@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { DailyCard, User } from "../App";
 import { ThreadSentence } from "./ThreadSentence";
-import { ConnectionNode } from "./ConnectionNode";
-import { ThreadConnector } from "./ThreadConnector";
+import { ThreadList } from "./ThreadRail";
 import { Plus } from "lucide-react";
+import type { ThreadConnection } from "../utils/threadConnections";
 
 interface ThreadViewProps {
   cards: DailyCard[];
@@ -12,23 +12,14 @@ interface ThreadViewProps {
   currentUser: User;
 }
 
-interface Connection {
-  id: string;
-  card1: DailyCard;
-  card2: DailyCard;
-  index1: number;
-  index2: number;
-}
-
-export function ThreadView({ cards, hasPostedToday, onPulseClick, currentUser }: ThreadViewProps) {
+export function ThreadView({ cards, hasPostedToday, onPulseClick }: ThreadViewProps) {
   const [pressedCardId, setPressedCardId] = useState<string | null>(null);
-  const [selectedConnection, setSelectedConnection] = useState<Connection | null>(null);
+  const [selectedConnection, setSelectedConnection] = useState<ThreadConnection | null>(null);
 
-  const connections = findConnections(cards);
   const pressedCard = cards.find((c) => c.id === pressedCardId);
 
   return (
-    <div className="relative max-w-2xl mx-auto px-6 py-12 min-h-screen">
+    <div className="relative max-w-2xl mx-auto px-4 sm:px-6 py-12 min-h-screen">
       {!hasPostedToday ? (
         <>
           <button
@@ -63,42 +54,28 @@ export function ThreadView({ cards, hasPostedToday, onPulseClick, currentUser }:
       ) : null}
 
       {hasPostedToday && cards.length > 0 && (
-        <div className="relative">
-          {cards.map((card, index) => {
-            const sparkConnection = connections.find((c) => c.index1 === index);
+        <ThreadList
+          cards={cards}
+          selectedConnectionId={selectedConnection?.id ?? null}
+          onSelectConnection={setSelectedConnection}
+          renderCard={(index) => {
+            const card = cards[index];
             const shouldHighlight =
-              pressedCard && pressedCard.mood === card.mood && pressedCard.id !== card.id;
+              !!pressedCard &&
+              pressedCard.mood === card.mood &&
+              pressedCard.id !== card.id;
 
             return (
-              <div key={card.id} className="relative">
-                <ThreadSentence
-                  card={card}
-                  onPressStart={() => setPressedCardId(card.id)}
-                  onPressEnd={() => setPressedCardId(null)}
-                  isPressed={pressedCardId === card.id}
-                  shouldHighlight={shouldHighlight}
-                />
-
-                {index < cards.length - 1 &&
-                  (sparkConnection ? (
-                    <ConnectionNode
-                      connection={sparkConnection}
-                      isSelected={selectedConnection?.id === sparkConnection.id}
-                      onToggle={() =>
-                        setSelectedConnection(
-                          selectedConnection?.id === sparkConnection.id
-                            ? null
-                            : sparkConnection
-                        )
-                      }
-                    />
-                  ) : (
-                    <ThreadConnector />
-                  ))}
-              </div>
+              <ThreadSentence
+                card={card}
+                onPressStart={() => setPressedCardId(card.id)}
+                onPressEnd={() => setPressedCardId(null)}
+                isPressed={pressedCardId === card.id}
+                shouldHighlight={shouldHighlight}
+              />
             );
-          })}
-        </div>
+          }}
+        />
       )}
 
       {hasPostedToday && cards.length === 0 && (
@@ -108,24 +85,4 @@ export function ThreadView({ cards, hasPostedToday, onPulseClick, currentUser }:
       )}
     </div>
   );
-}
-
-function findConnections(cards: DailyCard[]): Connection[] {
-  const connections: Connection[] = [];
-
-  for (let i = 0; i < cards.length - 1; i++) {
-    for (let j = i + 1; j < cards.length; j++) {
-      if (cards[i].mood === cards[j].mood && j === i + 1) {
-        connections.push({
-          id: `${cards[i].id}-${cards[j].id}`,
-          card1: cards[i],
-          card2: cards[j],
-          index1: i,
-          index2: j,
-        });
-      }
-    }
-  }
-
-  return connections;
 }
