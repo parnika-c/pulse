@@ -7,7 +7,9 @@ import { Calendar } from "lucide-react";
 import type { ThreadConnection } from "../utils/threadConnections";
 import {
   buildCapsuleDayMap,
+  clampViewMonth,
   dateKeyToDate,
+  getEarliestDateKey,
   getLatestDateKey,
   toDateKey,
 } from "../utils/capsuleDays";
@@ -34,6 +36,18 @@ export function TimeCapsule({ archivedDays, todayThreadCards }: TimeCapsuleProps
     return map;
   }, [dayMap]);
 
+  const earliestMonth = useMemo(() => {
+    const key = getEarliestDateKey(dayMap);
+    if (!key) return null;
+    const d = dateKeyToDate(key);
+    return { year: d.getFullYear(), month: d.getMonth() };
+  }, [dayMap]);
+
+  const currentMonth = useMemo(() => {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() };
+  }, []);
+
   useEffect(() => {
     if (selectedDateKey && dayMap.has(selectedDateKey)) return;
     const todayKey = toDateKey(new Date());
@@ -53,9 +67,18 @@ export function TimeCapsule({ archivedDays, todayThreadCards }: TimeCapsuleProps
   const selectedDay = selectedDateKey ? dayMap.get(selectedDateKey) : undefined;
   const hasAnyDays = dayMap.size > 0;
 
+  useEffect(() => {
+    const clamped = clampViewMonth(viewYear, viewMonth, earliestMonth, currentMonth);
+    if (clamped.year !== viewYear || clamped.month !== viewMonth) {
+      setViewYear(clamped.year);
+      setViewMonth(clamped.month);
+    }
+  }, [viewYear, viewMonth, earliestMonth, currentMonth]);
+
   const handleMonthChange = (year: number, month: number) => {
-    setViewYear(year);
-    setViewMonth(month);
+    const clamped = clampViewMonth(year, month, earliestMonth, currentMonth);
+    setViewYear(clamped.year);
+    setViewMonth(clamped.month);
   };
 
   const handleSelectDate = (dateKey: string) => {
@@ -72,6 +95,8 @@ export function TimeCapsule({ archivedDays, todayThreadCards }: TimeCapsuleProps
         selectedDateKey={selectedDateKey}
         onSelectDate={handleSelectDate}
         onMonthChange={handleMonthChange}
+        earliestYear={earliestMonth?.year}
+        earliestMonth={earliestMonth?.month}
       />
 
       {selectedDay ? (

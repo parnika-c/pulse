@@ -8,6 +8,9 @@ interface MonthCalendarProps {
   selectedDateKey: string | null;
   onSelectDate: (dateKey: string) => void;
   onMonthChange: (year: number, month: number) => void;
+  /** First month with a pulse; cannot navigate earlier */
+  earliestYear?: number;
+  earliestMonth?: number;
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -19,8 +22,18 @@ export function MonthCalendar({
   selectedDateKey,
   onSelectDate,
   onMonthChange,
+  earliestYear,
+  earliestMonth,
 }: MonthCalendarProps) {
-  const todayKey = toDateKey(new Date());
+  const today = new Date();
+  const todayKey = toDateKey(today);
+  const isCurrentMonth =
+    year === today.getFullYear() && month === today.getMonth();
+  const isEarliestMonth =
+    earliestYear !== undefined &&
+    earliestMonth !== undefined &&
+    year === earliestYear &&
+    month === earliestMonth;
   const firstOfMonth = new Date(year, month, 1);
   const startPad = firstOfMonth.getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -38,6 +51,8 @@ export function MonthCalendar({
   });
 
   const goMonth = (delta: number) => {
+    if (delta > 0 && isCurrentMonth) return;
+    if (delta < 0 && isEarliestMonth) return;
     const next = new Date(year, month + delta, 1);
     onMonthChange(next.getFullYear(), next.getMonth());
   };
@@ -48,7 +63,8 @@ export function MonthCalendar({
         <button
           type="button"
           onClick={() => goMonth(-1)}
-          className="p-2 rounded-full hover:text-white transition-colors text-zinc-400"
+          disabled={isEarliestMonth}
+          className="p-2 rounded-full transition-colors text-zinc-400 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-zinc-400 hover:text-white"
           aria-label="Previous month"
         >
           <ChevronLeft className="w-5 h-5" />
@@ -57,7 +73,8 @@ export function MonthCalendar({
         <button
           type="button"
           onClick={() => goMonth(1)}
-          className="p-2 rounded-lg hover:text-white transition-colors text-zinc-400"
+          disabled={isCurrentMonth}
+          className="p-2 rounded-lg transition-colors text-zinc-400 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-zinc-400 hover:text-white"
           aria-label="Next month"
         >
           <ChevronRight className="w-5 h-5" />

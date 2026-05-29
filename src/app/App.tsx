@@ -74,7 +74,63 @@ function dayInMonth(dayOfMonth: number): Date {
   return d;
 }
 
+function dateOn(year: number, month: number, day: number): Date {
+  const d = new Date(year, month, day, 14, 0, 0, 0);
+  return d;
+}
+
 const MOCK_ARCHIVED_DAYS: DailyCard[][] = [
+  [
+    {
+      id: "arch-m1",
+      userId: "1",
+      userName: "You",
+      mood: "Energized",
+      sentence: "Spring air and an early run made everything feel possible.",
+      rawInput: "gorgeous march morning, went for a run before work and felt so energized all day",
+      timestamp: dateOn(2026, 2, 5),
+    },
+    {
+      id: "arch-m2",
+      userId: "2",
+      userName: "Alex",
+      mood: "Creative",
+      sentence: "Redesigned the landing page in one inspired afternoon.",
+      rawInput: "finally cracked the landing page layout and it came together in one sitting",
+      timestamp: dateOn(2026, 2, 5),
+    },
+  ],
+  [
+    {
+      id: "arch-m3",
+      userId: "1",
+      userName: "You",
+      mood: "Reflective",
+      sentence: "Mid-month check-in left me grateful for small wins.",
+      rawInput: "took stock of the month so far and realized the small stuff is adding up",
+      timestamp: dateOn(2026, 2, 18),
+    },
+  ],
+  [
+    {
+      id: "arch-m4",
+      userId: "1",
+      userName: "You",
+      mood: "Anxious",
+      sentence: "Presentation nerves melted after it actually went fine.",
+      rawInput: "big presentation today, anxious all morning but it went way better than expected",
+      timestamp: dateOn(2026, 2, 24),
+    },
+    {
+      id: "arch-m5",
+      userId: "4",
+      userName: "Sam",
+      mood: "Peaceful",
+      sentence: "Ended March with a quiet night in and no plans.",
+      rawInput: "stayed in, cooked something simple, no notifications — exactly what i needed",
+      timestamp: dateOn(2026, 2, 24),
+    },
+  ],
   [
     {
       id: "arch-1",

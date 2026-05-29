@@ -77,6 +77,42 @@ export function getLatestDateKey(map: Map<string, CapsuleDay>): string | null {
   return keys.length > 0 ? keys[keys.length - 1]! : null;
 }
 
+export function getEarliestDateKey(map: Map<string, CapsuleDay>): string | null {
+  const keys = [...map.keys()].sort();
+  return keys.length > 0 ? keys[0]! : null;
+}
+
+export function monthIndex(year: number, month: number): number {
+  return year * 12 + month;
+}
+
+export function clampViewMonth(
+  year: number,
+  month: number,
+  earliest: { year: number; month: number } | null,
+  latest: { year: number; month: number }
+): { year: number; month: number } {
+  let y = year;
+  let m = month;
+  const view = monthIndex(y, m);
+
+  if (earliest) {
+    const min = monthIndex(earliest.year, earliest.month);
+    if (view < min) {
+      y = earliest.year;
+      m = earliest.month;
+    }
+  }
+
+  const max = monthIndex(latest.year, latest.month);
+  if (monthIndex(y, m) > max) {
+    y = latest.year;
+    m = latest.month;
+  }
+
+  return { year: y, month: m };
+}
+
 export function getMonthGrid(year: number, month: number): (Date | null)[][] {
   const first = new Date(year, month, 1);
   const last = new Date(year, month + 1, 0);
