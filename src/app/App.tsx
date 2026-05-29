@@ -335,13 +335,13 @@ function WaitingRoom({
       </div>
 
       <button
-        className="mt-10 px-5 py-3 rounded-xl bg-white text-black hover:bg-zinc-200 transition-colors"
+        className="mt-10 px-5 py-3 rounded-xl bg-zinc-600 text-white hover:bg-zinc-400 transition-colors"
         onClick={() => {
           const event = new CustomEvent("openPulse");
           window.dispatchEvent(event);
         }}
       >
-        Share Today's Pulse
+        Add Brain Dump
       </button>
     </div>
   );
