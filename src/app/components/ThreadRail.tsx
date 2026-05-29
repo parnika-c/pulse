@@ -4,11 +4,9 @@ import { DailyCard } from "../App";
 import { ConnectionNode } from "./ConnectionNode";
 import {
   findConnections,
-  getAdjacentBulge,
-  getConnectionBulge,
+  getGroupBulge,
   getMoodLineColor,
   getPathNodePosition,
-  isAdjacentConnection,
   type ThreadConnection,
 } from "../utils/threadConnections";
 
@@ -29,13 +27,9 @@ interface ThreadListProps {
   onSelectConnection: (connection: ThreadConnection | null) => void;
 }
 
-function bulgeForConnection(
-  connection: ThreadConnection,
-  allConnections: ThreadConnection[]
-): number {
-  return isAdjacentConnection(connection)
-    ? getAdjacentBulge()
-    : getConnectionBulge(connection, allConnections);
+function bulgeForGroup(connection: ThreadConnection): number {
+  const span = connection.index2 - connection.index1;
+  return getGroupBulge(span);
 }
 
 export function ThreadList({
@@ -56,7 +50,7 @@ export function ThreadList({
       return { railWidth: RAIL_MIN_WIDTH, anchorX: RAIL_MIN_WIDTH - RAIL_ANCHOR_INSET };
     }
     const maxBulge = Math.max(
-      ...connections.map((c) => bulgeForConnection(c, connections))
+      ...connections.map((c) => bulgeForGroup(c))
     );
     const width = Math.max(
       RAIL_MIN_WIDTH,
@@ -119,8 +113,8 @@ export function ThreadList({
               const a2 = anchorByIndex[connection.index2];
               if (!a1 || !a2) return null;
 
-              const bulge = bulgeForConnection(connection, connections);
-              const accent = getMoodLineColor(connection.card1.mood);
+              const bulge = bulgeForGroup(connection);
+              const accent = getMoodLineColor(connection.mood);
               const path = `M ${anchorX} ${a1.centerY} C ${anchorX - bulge} ${a1.centerY}, ${anchorX - bulge} ${a2.centerY}, ${anchorX} ${a2.centerY}`;
 
               return (
@@ -141,7 +135,7 @@ export function ThreadList({
             const a2 = anchorByIndex[connection.index2];
             if (!a1 || !a2) return null;
 
-            const bulge = bulgeForConnection(connection, connections);
+            const bulge = bulgeForGroup(connection);
             const { x, y } = getPathNodePosition(
               anchorX,
               a1.centerY,

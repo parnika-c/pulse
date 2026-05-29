@@ -2,24 +2,10 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { Sparkles } from "lucide-react";
-import { getMoodLineColor } from "../utils/threadConnections";
-
-interface Connection {
-  id: string;
-  card1: {
-    userName: string;
-    mood: string;
-    rawInput: string;
-  };
-  card2: {
-    userName: string;
-    mood: string;
-    rawInput: string;
-  };
-}
+import { getMoodLineColor, type ThreadConnection } from "../utils/threadConnections";
 
 interface ConnectionNodeProps {
-  connection: Connection;
+  connection: ThreadConnection;
   isSelected: boolean;
   onToggle: () => void;
   panelSide?: "left" | "right";
@@ -39,7 +25,6 @@ const moodVariants = {
 const MOBILE_BREAKPOINT = 640;
 const VIEWPORT_PAD = 16;
 const PANEL_MAX_WIDTH = 300;
-const PANEL_ESTIMATED_HEIGHT = 280;
 
 type PanelLayout = "beside" | "below";
 
@@ -52,19 +37,21 @@ interface PanelPosition {
 
 function computePanelPosition(
   rect: DOMRect,
-  panelSide: "left" | "right"
+  panelSide: "left" | "right",
+  cardCount: number
 ): PanelPosition {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const isMobile = vw < MOBILE_BREAKPOINT;
   const width = Math.min(PANEL_MAX_WIDTH, vw - VIEWPORT_PAD * 2);
+  const estimatedHeight = Math.min(420, 140 + cardCount * 72);
 
   if (isMobile) {
     let top = rect.bottom + 12;
     const left = Math.max(VIEWPORT_PAD, (vw - width) / 2);
 
-    if (top + PANEL_ESTIMATED_HEIGHT > vh - VIEWPORT_PAD) {
-      top = Math.max(VIEWPORT_PAD, rect.top - PANEL_ESTIMATED_HEIGHT - 12);
+    if (top + estimatedHeight > vh - VIEWPORT_PAD) {
+      top = Math.max(VIEWPORT_PAD, rect.top - estimatedHeight - 12);
     }
 
     return { top, left, width, layout: "below" };
@@ -77,7 +64,7 @@ function computePanelPosition(
   left = Math.max(VIEWPORT_PAD, Math.min(left, vw - width - VIEWPORT_PAD));
 
   let top = rect.top + rect.height / 2;
-  const halfH = PANEL_ESTIMATED_HEIGHT / 2;
+  const halfH = estimatedHeight / 2;
   top = Math.max(VIEWPORT_PAD + halfH, Math.min(top, vh - VIEWPORT_PAD - halfH));
 
   return { top, left, width, layout: "beside" };
@@ -89,10 +76,11 @@ export function ConnectionNode({
   onToggle,
   panelSide = "right",
 }: ConnectionNodeProps) {
-  const moodColor = getMoodLineColor(connection.card1.mood);
+  const { mood, cards } = connection;
+  const moodColor = getMoodLineColor(mood);
   const variants =
-    moodVariants[connection.card1.mood as keyof typeof moodVariants] ??
-    moodVariants.Exhausted;
+    moodVariants[mood as keyof typeof moodVariants] ?? moodVariants.Exhausted;
+  const feelingLabel = cards.length > 2 ? "All" : "Both";
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [panelPos, setPanelPos] = useState<PanelPosition>({
     top: 0,
@@ -106,7 +94,7 @@ export function ConnectionNode({
 
     const updatePosition = () => {
       const rect = buttonRef.current!.getBoundingClientRect();
-      setPanelPos(computePanelPosition(rect, panelSide));
+      setPanelPos(computePanelPosition(rect, panelSide, cards.length));
     };
 
     updatePosition();
@@ -116,7 +104,7 @@ export function ConnectionNode({
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [isSelected, panelSide]);
+  }, [isSelected, panelSide, cards.length]);
 
   const panel =
     typeof document !== "undefined"
@@ -148,25 +136,20 @@ export function ConnectionNode({
                   </div>
 
                   <div className="space-y-4">
-                    <div className={`border-l-2 ${variants.border} pl-4`}>
-                      <p className="text-xs text-zinc-500 mb-1">{connection.card1.userName}</p>
-                      <p className="text-sm text-zinc-300 italic break-words">
-                        &ldquo;{connection.card1.rawInput}&rdquo;
-                      </p>
-                    </div>
-
-                    <div className={`border-l-2 ${variants.border} pl-4`}>
-                      <p className="text-xs text-zinc-500 mb-1">{connection.card2.userName}</p>
-                      <p className="text-sm text-zinc-300 italic break-words">
-                        &ldquo;{connection.card2.rawInput}&rdquo;
-                      </p>
-                    </div>
+                    {cards.map((card) => (
+                      <div key={card.id} className={`border-l-2 ${variants.border} pl-4`}>
+                        <p className="text-xs text-zinc-500 mb-1">{card.userName}</p>
+                        <p className="text-sm text-zinc-300 italic break-words">
+                          &ldquo;{card.rawInput}&rdquo;
+                        </p>
+                      </div>
+                    ))}
                   </div>
 
                   <div className="mt-4 pt-4 border-t border-zinc-800">
                     <p className="text-xs text-zinc-400">
-                      Both feeling{" "}
-                      <span className={variants.text}>{connection.card1.mood}</span> today
+                      {feelingLabel} feeling{" "}
+                      <span className={variants.text}>{mood}</span> today
                     </p>
                   </div>
                 </div>
@@ -183,7 +166,7 @@ export function ConnectionNode({
         <motion.button
           ref={buttonRef}
           onClick={onToggle}
-          aria-label="Shared spark connection"
+          aria-label={`Shared spark: ${cards.length} people feeling ${mood}`}
           aria-expanded={isSelected}
           className={`flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-zinc-950 border ${variants.border} backdrop-blur-md overflow-hidden`}
           style={{

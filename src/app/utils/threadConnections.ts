@@ -2,8 +2,10 @@ import { DailyCard } from "../App";
 
 export interface ThreadConnection {
   id: string;
-  card1: DailyCard;
-  card2: DailyCard;
+  mood: string;
+  cards: DailyCard[];
+  /** Sorted card indices in the thread */
+  indices: number[];
   index1: number;
   index2: number;
 }
@@ -23,41 +25,37 @@ export function getMoodLineColor(mood: string): string {
   return MOOD_LINE_COLORS[mood] ?? MOOD_LINE_COLORS.Exhausted;
 }
 
-/** All pairs sharing the same mood (not only adjacent). */
+/** One spark group per mood shared by 2+ cards. */
 export function findConnections(cards: DailyCard[]): ThreadConnection[] {
-  const connections: ThreadConnection[] = [];
+  const byMood = new Map<string, number[]>();
 
-  for (let i = 0; i < cards.length - 1; i++) {
-    for (let j = i + 1; j < cards.length; j++) {
-      if (cards[i].mood === cards[j].mood) {
-        connections.push({
-          id: `${cards[i].id}-${cards[j].id}`,
-          card1: cards[i],
-          card2: cards[j],
-          index1: i,
-          index2: j,
-        });
-      }
-    }
+  cards.forEach((card, index) => {
+    const list = byMood.get(card.mood) ?? [];
+    list.push(index);
+    byMood.set(card.mood, list);
+  });
+
+  const groups: ThreadConnection[] = [];
+
+  for (const [mood, indices] of byMood) {
+    if (indices.length < 2) continue;
+
+    const sorted = [...indices].sort((a, b) => a - b);
+    groups.push({
+      id: `spark-${mood}-${sorted.join("-")}`,
+      mood,
+      cards: sorted.map((i) => cards[i]),
+      indices: sorted,
+      index1: sorted[0],
+      index2: sorted[sorted.length - 1],
+    });
   }
 
-  return connections;
+  return groups;
 }
 
-export function isAdjacentConnection(connection: ThreadConnection): boolean {
-  return connection.index2 === connection.index1 + 1;
-}
-
-export function getConnectionBulge(
-  connection: ThreadConnection,
-  allConnections: ThreadConnection[]
-): number {
-  const span = connection.index2 - connection.index1;
-  const curvedFromSameStart = allConnections
-    .filter((c) => c.index1 === connection.index1 && !isAdjacentConnection(c))
-    .sort((a, b) => a.index2 - b.index2);
-  const curveIndex = curvedFromSameStart.findIndex((c) => c.id === connection.id);
-  return 14 + span * 8 + Math.max(0, curveIndex) * 12;
+export function getGroupBulge(span: number): number {
+  return span <= 1 ? getAdjacentBulge() : 14 + span * 8;
 }
 
 /** Point at t=0.5 on the cubic curve used for spark paths. */
