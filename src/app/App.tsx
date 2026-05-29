@@ -67,6 +67,13 @@ function daysAgo(n: number): Date {
   return d;
 }
 
+function dayInMonth(dayOfMonth: number): Date {
+  const d = new Date();
+  d.setDate(dayOfMonth);
+  d.setHours(14, 0, 0, 0);
+  return d;
+}
+
 const MOCK_ARCHIVED_DAYS: DailyCard[][] = [
   [
     {
@@ -115,6 +122,39 @@ const MOCK_ARCHIVED_DAYS: DailyCard[][] = [
       sentence: "Back-to-back deadlines left no room to breathe.",
       rawInput: "back to back deadlines all day, barely had time to eat lunch",
       timestamp: daysAgo(2),
+    },
+  ],
+  [
+    {
+      id: "arch-6",
+      userId: "1",
+      userName: "You",
+      mood: "Creative",
+      sentence: "Brainstorm session sparked three new ideas worth chasing.",
+      rawInput: "whiteboard session with the team and suddenly everything connected",
+      timestamp: dayInMonth(8),
+    },
+  ],
+  [
+    {
+      id: "arch-7",
+      userId: "1",
+      userName: "You",
+      mood: "Peaceful",
+      sentence: "Slow morning coffee and nowhere to be felt like luxury.",
+      rawInput: "actually sat with my coffee without checking slack for once",
+      timestamp: dayInMonth(15),
+    },
+  ],
+  [
+    {
+      id: "arch-8",
+      userId: "1",
+      userName: "You",
+      mood: "Accomplished",
+      sentence: "Wrapped the side project I've been avoiding for months.",
+      rawInput: "finally shipped the side project and it feels incredible",
+      timestamp: dayInMonth(22),
     },
   ],
 ];
@@ -271,7 +311,16 @@ export default function App() {
             currentUser={currentUser}
           />
         ) : (
-          <TimeCapsule archivedDays={archivedDays} currentCard={userCard} />
+          <TimeCapsule
+            archivedDays={archivedDays}
+            todayThreadCards={
+              hasPostedToday
+                ? visibleCards
+                : userCard
+                  ? [userCard]
+                  : []
+            }
+          />
         )}
       </main>
 
