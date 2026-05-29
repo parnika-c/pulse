@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { DailyCard, User } from "../App";
 import { ThreadSentence } from "./ThreadSentence";
-import { ConnectionNode } from "./ConnectionNode";
+import { ThreadList } from "./ThreadRail";
 import { Plus } from "lucide-react";
+import type { ThreadConnection } from "../utils/threadConnections";
 
 interface ThreadViewProps {
   cards: DailyCard[];
@@ -11,23 +12,14 @@ interface ThreadViewProps {
   currentUser: User;
 }
 
-interface Connection {
-  id: string;
-  card1: DailyCard;
-  card2: DailyCard;
-  index1: number;
-  index2: number;
-}
-
-export function ThreadView({ cards, hasPostedToday, onPulseClick, currentUser }: ThreadViewProps) {
+export function ThreadView({ cards, hasPostedToday, onPulseClick }: ThreadViewProps) {
   const [pressedCardId, setPressedCardId] = useState<string | null>(null);
-  const [selectedConnection, setSelectedConnection] = useState<Connection | null>(null);
+  const [selectedConnection, setSelectedConnection] = useState<ThreadConnection | null>(null);
 
-  const connections = findConnections(cards);
   const pressedCard = cards.find((c) => c.id === pressedCardId);
 
   return (
-    <div className="relative max-w-2xl mx-auto px-6 py-12 min-h-screen">
+    <div className="relative w-full max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12 min-h-screen box-border">
       {!hasPostedToday ? (
         <>
           <button
@@ -62,96 +54,28 @@ export function ThreadView({ cards, hasPostedToday, onPulseClick, currentUser }:
       ) : null}
 
       {hasPostedToday && cards.length > 0 && (
-        <div className="relative">
-          <svg
-            className="absolute left-1/2 top-0 -translate-x-1/2 pointer-events-none"
-            width="4"
-            height="100%"
-            style={{ minHeight: `${cards.length * 180}px` }}
-          >
-            <defs>
-              <filter id="glow">
-                <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-                <feMerge>
-                  <feMergeNode in="coloredBlur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
+        <ThreadList
+          cards={cards}
+          selectedConnectionId={selectedConnection?.id ?? null}
+          onSelectConnection={setSelectedConnection}
+          renderCard={(index) => {
+            const card = cards[index];
+            const shouldHighlight =
+              !!pressedCard &&
+              pressedCard.mood === card.mood &&
+              pressedCard.id !== card.id;
 
-            {cards.map((_, i) => {
-              if (i === cards.length - 1) return null;
-
-              const y1 = i * 180 + 90;
-              const y2 = (i + 1) * 180 + 90;
-              const connection = connections.find(
-                (c) => c.index1 === i && c.index2 === i + 1
-              );
-
-              if (connection) {
-                const midY = (y1 + y2) / 2;
-                const loopWidth = 60;
-                return (
-                  <path
-                    key={`thread-${i}`}
-                    d={`M 2 ${y1} Q ${loopWidth} ${midY} 2 ${y2}`}
-                    stroke="rgba(255, 255, 255, 0.3)"
-                    strokeWidth="2"
-                    fill="none"
-                    filter="url(#glow)"
-                  />
-                );
-              }
-
-              return (
-                <line
-                  key={`thread-${i}`}
-                  x1="2"
-                  y1={y1}
-                  x2="2"
-                  y2={y2}
-                  stroke="rgba(255, 255, 255, 0.3)"
-                  strokeWidth="2"
-                  filter="url(#glow)"
-                />
-              );
-            })}
-          </svg>
-
-          <div className="space-y-4">
-            {cards.map((card, index) => {
-              const connection = connections.find(
-                (c) => c.index1 === index || c.index2 === index
-              );
-              const shouldHighlight =
-                pressedCard && pressedCard.mood === card.mood && pressedCard.id !== card.id;
-
-              return (
-                <div key={card.id} className="relative">
-                  <ThreadSentence
-                    card={card}
-                    onPressStart={() => setPressedCardId(card.id)}
-                    onPressEnd={() => setPressedCardId(null)}
-                    isPressed={pressedCardId === card.id}
-                    shouldHighlight={shouldHighlight}
-                  />
-
-                  {connection && connection.index1 === index && (
-                    <ConnectionNode
-                      connection={connection}
-                      isSelected={selectedConnection?.id === connection.id}
-                      onToggle={() =>
-                        setSelectedConnection(
-                          selectedConnection?.id === connection.id ? null : connection
-                        )
-                      }
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+            return (
+              <ThreadSentence
+                card={card}
+                onPressStart={() => setPressedCardId(card.id)}
+                onPressEnd={() => setPressedCardId(null)}
+                isPressed={pressedCardId === card.id}
+                shouldHighlight={shouldHighlight}
+              />
+            );
+          }}
+        />
       )}
 
       {hasPostedToday && cards.length === 0 && (
@@ -161,38 +85,4 @@ export function ThreadView({ cards, hasPostedToday, onPulseClick, currentUser }:
       )}
     </div>
   );
-}
-
-function findConnections(cards: DailyCard[]): Connection[] {
-  const connections: Connection[] = [];
-
-  for (let i = 0; i < cards.length - 1; i++) {
-    for (let j = i + 1; j < cards.length; j++) {
-      if (cards[i].mood === cards[j].mood && j === i + 1) {
-        connections.push({
-          id: `${cards[i].id}-${cards[j].id}`,
-          card1: cards[i],
-          card2: cards[j],
-          index1: i,
-          index2: j,
-        });
-      }
-    }
-  }
-
-  return connections;
-}
-
-function getMoodColor(mood: string): string {
-  const colors: Record<string, string> = {
-    Exhausted: "#a855f7",
-    Creative: "#ec4899",
-    Accomplished: "#10b981",
-    Reflective: "#3b82f6",
-    Energized: "#eab308",
-    Overwhelmed: "#f97316",
-    Peaceful: "#14b8a6",
-    Anxious: "#ef4444",
-  };
-  return colors[mood] || "#a855f7";
 }
