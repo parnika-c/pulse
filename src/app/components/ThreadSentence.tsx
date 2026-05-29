@@ -1,5 +1,5 @@
 import { DailyCard } from "../App";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 
 interface ThreadSentenceProps {
   card: DailyCard;
@@ -43,26 +43,27 @@ export function ThreadSentence({
 
   return (
     <motion.div
+      layout
       className="relative py-6 sm:py-8 cursor-pointer select-none"
       onMouseDown={onPressStart}
       onMouseUp={onPressEnd}
       onMouseLeave={onPressEnd}
       onTouchStart={onPressStart}
       onTouchEnd={onPressEnd}
-      animate={{
-        scale: isPressed ? 1.05 : shouldHighlight ? 1.02 : 1,
-      }}
+      animate={{ scale: isPressed ? 1.05 : shouldHighlight ? 1.02 : 1, }}
       transition={{ duration: 0.2, ease: "easeOut" }}
     >
+      {/* Background Aura */}
       <motion.div
+        layout
         className="absolute inset-0 rounded-3xl"
         style={{
           background: `radial-gradient(ellipse at center, ${auraColor} 0%, transparent 70%)`,
           filter: "blur(40px)",
         }}
         animate={{
-          scale: isPressed ? 1.8 : shouldHighlight ? 1.4 : 1,
-          opacity: isPressed ? 0.8 : shouldHighlight ? 0.6 : 1,
+          scale: isPressed ? 1.7 : shouldHighlight ? 1.4 : 1,
+          opacity: isPressed ? 0.9 : shouldHighlight ? 0.6 : 1,
         }}
         transition={{ duration: 0.3, ease: "easeOut" }}
       />
@@ -84,17 +85,37 @@ export function ThreadSentence({
           <span className={`text-xs uppercase tracking-wider shrink-0 ${textColor} opacity-80`}>
             {card.mood}
           </span>
+
+          {isPressed && (
+              <motion.span 
+                initial={{ opacity: 0 }} 
+                animate={{ opacity: 1 }} 
+                className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-zinc-300 uppercase tracking-tighter"
+              >
+                Raw
+              </motion.span>
+            )}
         </div>
 
-        <motion.p
-          className="text-[15px] sm:text-base leading-relaxed text-white break-words"
-          animate={{
-            letterSpacing: isPressed ? "0.02em" : "0em",
-          }}
-          transition={{ duration: 0.2 }}
-        >
-          {card.sentence}
-        </motion.p>
+        <div className="relative min-h-[1.5em]">
+          <AnimatePresence mode="wait">
+            <motion.p
+              key={isPressed ? "raw" : "polished"}
+              initial={{ opacity: 0, y: 2 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -2 }}
+              transition={{ duration: 0.15 }}
+              className={`leading-relaxed break-words ${
+                isPressed ? "text-xs text-zinc-400 italic font-light" : "text-[15px] sm:text-base text-white"
+              }`}
+            >
+              {isPressed 
+                ? (card.rawInput || card.sentence)
+                : card.sentence
+              }
+            </motion.p>
+          </AnimatePresence>
+        </div>
       </div>
     </motion.div>
   );
